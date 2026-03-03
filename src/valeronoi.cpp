@@ -212,7 +212,8 @@ void ValeronoiWindow::openFile() {
     QString filter = get_open_save_filter();
     const auto dir = get_open_save_dir();
     QString file_name = QFileDialog::getOpenFileName(
-        this, tr("Select file to load"), dir, filter);
+        this, tr("Select file to load"), dir, filter,
+        nullptr, QFileDialog::DontUseNativeDialog);
 
     if (!file_name.isEmpty()) {
       load_file(file_name);
@@ -253,7 +254,8 @@ void ValeronoiWindow::saveAsFile() {
   QString filter = get_open_save_filter();
   const auto dir = get_open_save_dir();
   QString file_name = QFileDialog::getSaveFileName(
-      this, tr("Select file to save as"), dir, filter);
+      this, tr("Select file to save as"), dir, filter,
+      nullptr, QFileDialog::DontUseNativeDialog);
   if (!file_name.isEmpty()) {
     if (!file_name.endsWith(VALERONOI_FILE_EXTENSION)) {
       file_name.append(".").append(VALERONOI_FILE_EXTENSION);
@@ -590,7 +592,8 @@ void ValeronoiWindow::connect_actions() {
         tr("Please note that the SVG export is experimental and will generate "
            "geometry that is out of bounds."));
     QString export_path = QFileDialog::getSaveFileName(
-        this, tr("Save SVG"), get_open_save_dir(), tr("SVG files (*.svg)"));
+        this, tr("Save SVG"), get_open_save_dir(), tr("SVG files (*.svg)"),
+        nullptr, QFileDialog::DontUseNativeDialog);
     if (export_path.isEmpty()) {
       return;
     }
