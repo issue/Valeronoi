@@ -71,6 +71,42 @@ jobs:
           macdeployqt valeronoi.app
           mkdir dist
           mv valeronoi.app dist/Valeronoi.app
+      - name: Sign macOS Application (ARM64)
+        if: matrix.arch == 'arm64'
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # import certificate from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          # apply signing
+          cd build/dist
+          codesign --force --options=runtime --sign "-" Valeronoi.app/Contents/Frameworks/*.framework
+          codesign --force --options=runtime --sign "-" Valeronoi.app/Contents/MacOS/valeronoi  
+          codesign --force --deep --options=runtime --sign "-" Valeronoi.app
+          codesign --verify --verbose Valeronoi.app
+      - name: Create DMG
+        env:
+          ARCH: ${{ matrix.arch }}
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          cd build/dist
           if [ "$ARCH" = "arm64" ]; then
             create-dmg --hdiutil-verbose --no-internet-enable --skip-jenkins --volname "Valeronoi Installer" --volicon "../../assets/icon/valeronoi.icns" --window-pos 200 120 --window-size 800 400 --icon-size 100 --icon "Valeronoi.app" 200 190 --hide-extension "Valeronoi.app" --app-drop-link 600 185 "Valeronoi-macOS-ARM-$VARIANT.dmg" "."
           else
